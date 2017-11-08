@@ -34,7 +34,7 @@ def extractFeatures(record):
     features.append(commonoperation.getDayType(record[12]))  # business day or not
     features.append(commonoperation.getHourType(record[12]))  # 0-23h /2
     features.append(seatClassDict[record[15]])  # seat class: first class, commerical, econimical seat
-    # features.append(record[19]) #price kpi
+    features.append(record[19]) #zbw: use price kpi? can represent choice more procise?
     features.append(record[5])  # price discount
     return features
 

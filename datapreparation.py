@@ -34,3 +34,15 @@ def getTestdata(uId):
 	if uId not in testdataDict:
 		prepareData(uId)
 	return testdataDict[uId]
+
+# dump airlineName and its no into file:airlineIden.json
+import commonoperation, pickle
+def generateFlightIden():
+	flightIdenDict = {}
+	allFlightName = commonoperation.executeSQL('select * from airline_table')
+	for iden in range(0,len(allFlightName)):
+		flightIdenDict[allFlightName[iden][0]] = iden
+	pickle.dump(flightIdenDict, open('data/airlineIden.json','w'))
+
+if __name__ == "__main__":
+	generateFlightIden()

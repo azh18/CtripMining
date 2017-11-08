@@ -271,24 +271,6 @@ def generateProflesWithCityInfo(userList):
         # records=commonoperation.getAllRecordsofAUserFromDB(uId)
         records = commonoperation.getAllRecordsofAPassengerFromDB(uId)
         profile_n = []
-        # home, avg # of advanced days, frequency, proportion of first class, proportion of workdays, variety of traval cities
-        # the distance between home is ovious, we ignore the field so far
-        # "variety of traval cities" seems no use
-        p = getTraveFrequency(records)
-        profile_n.append(p[1])
-        # p=getDiversityOfSeats(records)
-        p = getSeatPreference(records)
-        profile_n.append(p[1])
-        p = getProportionOfWorkDays(records)
-        profile_n.append(p[1])
-        p = getAdvancedDays(records)
-        profile_n.append(p[1])
-        p = getDeltaDays(records)
-        profile_n.append(p[1])
-        p = getDiversityOfDestinations(records)
-        profile_n.append(p[1])
-        p = getAge(records)
-        profile_n.append(p[1])
         p = getExpectIncome(records)
         profile_n.append(p[0])
         profilesPool_n[uId] = profile_n
@@ -339,12 +321,49 @@ class getProfilesThread(threading.Thread):
         self.profileDict = generateProfles(self.userList)
         print "Exiting thread " + str(self.threadID)
 
+class getProfilesThreadWithExternalInfo(threading.Thread):
+    def __init__(self, threadID, userList, externalInfo):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.userList = userList
+        self.profileDict = None
+        self.externalInfo = externalInfo
+
+    def run(self):
+        print "Starting thread " + str(self.threadID)
+        self.profileDict = generateProflesWithCityInfo(self.userList)
+        print "Exiting thread " + str(self.threadID)
 
 def generateProfilesMultiThread(allUsers, nThreads=4):
     userGroup = commonoperation.divideUsers(allUsers, nThreads)
     threadList = []
     for t in range(0, nThreads):
         threadList.append(getProfilesThread(t, userGroup[t]))
+
+    for singleThread in threadList:
+        singleThread.start()
+
+    for singleThread in threadList:
+        singleThread.join()
+
+    # all generated user profile
+    profileDictGroup = []
+    for singleThread in threadList:
+        profileDictGroup.append(singleThread.profileDict)
+
+    # print(profileDictGroup)
+    profileDict = commonoperation.mergeDicts(*profileDictGroup)
+    print('after merging, the len of profile is {0}'.format(len(profileDict)))
+    # for p in profileDictGroup:
+    # 	print(len(p))
+    return profileDict
+
+
+def generateProfilesMultiThreadWithExternalInfo(allUsers, nThreads=4, externalInfo=1):
+    userGroup = commonoperation.divideUsers(allUsers, nThreads)
+    threadList = []
+    for t in range(0, nThreads):
+        threadList.append(getProfilesThreadWithExternalInfo(t, userGroup[t], externalInfo))
 
     for singleThread in threadList:
         singleThread.start()
@@ -427,6 +446,15 @@ def getUserDistanceDim(uId,c,dimID):
         print 'one of profile is not in db\n'
         return MAX
     return abs(profile1[dimID] - profile2[dimID])
+
+def getUserDistanceExternal(uId,c,externalID):
+    profile1 = getExpectIncome(commonoperation.getAllRecordsofAPassengerFromDB(uId))[0]
+    profile2 = getExpectIncome(commonoperation.getAllRecordsofAPassengerFromDB(c))[0]
+    MAX = 10000
+    if profile1 is None or profile2 is None:
+        print 'one of profile is not in db\n'
+        return MAX
+    return abs(profile1 - profile2)
 
 #################################################################################
 

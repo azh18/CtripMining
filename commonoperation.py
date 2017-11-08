@@ -133,15 +133,20 @@ def getIncomeFromCityID(city):
                          db=db_database, unix_socket=db_sock, port=10002)
     cursor = db.cursor()
     sql = "SELECT airport_income.income from airport_income,city_port_char " \
-          "where city_port_char.dport=airport_income.`Port` and city_port_char.dcity = " + str(cityID)
+          "where city_port_char.dport=airport_income.`Port` and city_port_char.dcity = " + str(city)
     try:
         cursor.execute(sql)
         results = cursor.fetchall()
     except:
         print "Error: unable to fecth data"
     db.close()
-    income = results[0][0]/50000 # normalized
-    return income
+    try:
+        income = results[0][0]/50000 # normalized
+        return income
+    except:
+        print "cannot prase income from home:%s" % city
+        income = None # far more than normal distance, to avoid chosen as the near because cannot find the real income
+        return income
 
 
 
@@ -180,7 +185,7 @@ def getNFlightsOfAPassengerFromDB(pid):
 
 def executeSQL(sql_str):
     db = MySQLdb.connect(host=db_ip, user=db_user, passwd=db_pwd,
-                         db=db_database, unix_socket=db_sock)
+                         db=db_database, unix_socket=db_sock, port=10002)
     cursor = db.cursor()
     try:
         cursor.execute(sql_str)

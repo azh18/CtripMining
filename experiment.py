@@ -199,6 +199,18 @@ def modelUsers2(users):  # experiment 2
                                          trainDataOfNeighbors=featuresListOfNeighborsDims)
         m7.setVariables(bandwidth='cv_ml', bandwidth1='cv_ml')
         m7.run()
+        # add city do not work
+        # add info about city
+        # for i in range(0, len(basicmining.getProfile(u))):
+        #     neighbors = usergeneration.getSimilarUsersDimWithExternalInfo(u, 1)
+        #     listTemp = []
+        #     for n in neighbors:
+        #         listTemp += (featureextraction.generateFeaturesList(n))
+        #     featuresListOfNeighborsDims.append(listTemp)
+        # m8 = comparemethods.mixfKDEModelDim(u, modelName='mix-fKDE2_cv_moreComponentsWithIncome', trainData=traindata, testData=testdata,
+        #                                  trainDataOfNeighbors=featuresListOfNeighborsDims)
+        # m8.setVariables(bandwidth='cv_ml', bandwidth1='cv_ml')
+        # m8.run()
 
 
 def modelUsers3(users):

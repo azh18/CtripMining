@@ -1,7 +1,16 @@
 # Observation, used for feature extraction
 # Randomly select 10,000 passengers to perform all observations 
-
-
+import pickle
+def dumpSamplePassengersInfo():
+	passengers = executeSQL('select passengerid from passenger_flight_counts where count>=20 ORDER BY RAND() limit 10000;')
+	passengers = [p[0] for p in passengers]
+	randomSelectedPassengerInfoDict = {}
+	for passengerid in passengers:
+		passengerInfo = getAllRecordsofAPassengerFromDB(passengerid)
+		randomSelectedPassengerInfoDict[passengerid] = passengerInfo
+	dumpFile = open('observe/choosedPassengersInfo_10000.json','w')
+	pickle.dump(randomSelectedPassengerInfoDict,dumpFile)
+	dumpFile.close()
 
 ###################################################################################
 #Reservation factors
@@ -14,15 +23,20 @@ import numpy as np
 from commonoperation import getAllRecordsofAPassengerFromDB
 from commonoperation import computeTimeDiff
 from commonoperation import executeSQL
-def extractReservationFactors():
-	passengers=executeSQL('select passengerid from passenger_flight_counts where count>=20 ORDER BY RAND() limit 10000;')
-	passengers=[p[0] for p in passengers]
 
+
+def extractReservationFactors():
+	# passengers=executeSQL('select passengerid from passenger_flight_counts where count>=20 ORDER BY RAND() limit 10000;')
+	# passengers=[p[0] for p in passengers]
+	sampleData = pickle.load(open('observe/choosedPassengersInfo_10000.json'))
+	passengers = sampleData.keys()
 	alpha_samples=[]	#alpha=takeoff time - order time
 	beta_samples=[] 	#beta=takeoff time - last takeoff time
+	companion_sample = [] # number of companion for each passenger
 	for passengerid in passengers:
 		print(passengerid)
-		records=getAllRecordsofAPassengerFromDB(passengerid) #get records from DB
+		#records=getAllRecordsofAPassengerFromDB(passengerid) #get records from DB, of this single user
+		records = sampleData[passengerid]
 		for i in range(0,len(records)):
 			r=records[i]
 			#advanced days
@@ -33,76 +47,118 @@ def extractReservationFactors():
 			if i>0:
 				# last_trip_time=time.strptime(records[i-1][12],'%Y-%m-%d %H:%M:%S.%f')
 				last_trip_time=records[i-1][12]
-				beta_samples.append(computeTimeDiff(takeofftime,last_trip_time)) 
+				beta_samples.append(computeTimeDiff(takeofftime,last_trip_time))
+			# companion num searching
+			companion_instance = executeSQL('select count from freq_orderid where orderid=\'%s\''%r[1])
+			companion_sample.append(companion_instance[0][0])
+
+
 	alpha_samples=list(filter(lambda x:x>=0,alpha_samples))
-	with open('alpha_samples.txt','w') as fh:
+	with open('observe/alpha_samples.txt','w') as fh:
 		fh.write('{0}\r\n'.format('\t'.join(str(e) for e in alpha_samples)))
-	with open('beta_samples.txt','w') as fh:
+	with open('observe/beta_samples.txt','w') as fh:
 		fh.write('{0}\r\n'.format('\t'.join(str(e) for e in beta_samples)))
-	return (alpha_samples,beta_samples)
+	with open('observe/companion_samples.txt','w') as fh:
+		fh.write('{0}\r\n'.format('\t'.join(str(e) for e in companion_sample)))
+	return (alpha_samples,beta_samples,companion_sample)
 
 from myplotlib import plotPDF
 from myplotlib import plotCDF
 def plotReservationFactors():
 	# alpha_samples,beta_samples=extractReservationFactors()
-	with open('temp/alpha_samples.txt','r') as fh:
+	with open('observe/alpha_samples.txt','r') as fh:
 		# fh.write('{0}\r\n'.format('\t'.join(str(e) for e in alpha_samples)))
 		alpha_samples=fh.readline().replace('\r\n','').split('\t')
-	with open('temp/beta_samples.txt','r') as fh:
+	with open('observe/beta_samples.txt','r') as fh:
 		# fh.write('{0}\r\n'.format('\t'.join(str(e) for e in alpha_samples)))
 		beta_samples=fh.readline().replace('\r\n','').split('\t')
+	with open('observe/companion_samples.txt') as fh:
+		companion_samples=fh.readline().replace('\r\n','').split('\t')
 
 	alpha_samples=[float(e) for e in alpha_samples]
 	beta_samples=[float(e) for e in beta_samples]
+	companion_samples = [int(e) for e in companion_samples]
+
 	# beta_samples=[float(e) for e in beta_samples]
-	plotPDF(alpha_samples,r'$\alpha$ (days)',r'Empirical PDF','alpha_pdf.png',(0,32))
-	plotCDF(alpha_samples,r'$\alpha$ (days)',r'Empirical CDF','alpha_cdf.png')
-	plotPDF(beta_samples,r'$\beta$ (days)',r'Empirical PDF','beta_pdf.png',(0,101))
-	plotCDF(beta_samples,r'$\beta$ (days)',r'Empirical CDF','beta_cdf.png')
+	plotPDF(alpha_samples,r'$\alpha$ (days)',r'Empirical PDF','observe/alpha_pdf.png',(0,32))
+	plotCDF(alpha_samples,r'$\alpha$ (days)',r'Empirical CDF','observe/alpha_cdf.png')
+	plotPDF(beta_samples,r'$\beta$ (days)',r'Empirical PDF','observe/beta_pdf.png',(0,101))
+	plotCDF(beta_samples,r'$\beta$ (days)',r'Empirical CDF','observe/beta_cdf.png')
+	plotPDF(companion_samples,r'$\sigma$',r'Empirical PDF','observe/companion_pdf.png')
 
 ###################################################################################
 #Flight factors
+# no need to extract the date and time, because no modification is needed
 ###################################################################################
-def extractFactors():
+import datapreparation
+def extractFlightFactors():
 	female_age_samples=[]
 	male_age_samples=[]
 	discount_samples=[]
-	for line in open('temp/random_select_records_10000_passengers.txt','r'):
-		fields=line.replace('\r\n','').split('\t')[:-1]  #a minor issue in the data, remove the last column
-		discount_samples.append(float(fields[6]))
-		age=int(fields[-3])
-		gender=fields[-2]
+	airline_samples = {}
+	sampleData = pickle.load(open('observe/choosedPassengersInfo_10000.json'))
+	airlineInfo = pickle.load(open('data/airlineIden.json'))
+	for passengerid, data in sampleData:
+		age = int(data[0][-3])
+		gender = data[0][-2]
 		if gender=='F':
 			female_age_samples.append(age)
 		elif gender=='M':
 			male_age_samples.append(age)
-	with open('temp/discount_samples.txt','w') as fh:
+		for record in data:
+			discount_samples.append(float(record[6]))
+			airlineName = record[7]
+			airlineName = airlineInfo[airlineName] # transfer name into Iden
+			if airline_samples.has_key(airlineName):
+				airline_samples[airlineName] += 1
+			else:
+				airline_samples[airlineName] = 0
+
+	with open('observe/discount_samples.txt','w') as fh:
 		fh.write('{0}\r\n'.format('\t'.join(str(e) for e in discount_samples)))
-	with open('temp/female_age_samples.txt','w') as fh:
+	with open('observe/female_age_samples.txt', 'w') as fh:
 		fh.write('{0}\r\n'.format('\t'.join(str(e) for e in female_age_samples)))
-	with open('temp/male_age_samples.txt','w') as fh:
+	with open('observe/male_age_samples.txt', 'w') as fh:
 		fh.write('{0}\r\n'.format('\t'.join(str(e) for e in male_age_samples)))
-	return (discount_samples,female_age_samples,male_age_samples)
+	with open('observe/airline_name_samples.txt','w') as fh:
+		fh.write('{0}\r\n'.format('\t'.join(str(e) for k,e in airline_samples)))
+	return (discount_samples, female_age_samples, male_age_samples, airline_samples)
+
 
 def plotFlightFactors():
-	with open('temp/discount_samples.txt','r') as fh:
+	with open('observe/discount_samples.txt','r') as fh:
 		discount_samples=fh.readline().replace('\r\n','').split('\t')
 	discount_samples=[float(e) for e in discount_samples]
 	# beta_samples=[float(e) for e in beta_samples]
-	plotPDF(discount_samples,r'Price discount $\rho$',r'Empirical PDF','discount_pdf.png',(0,1))
-	plotCDF(discount_samples,r'Price discount $\rho$',r'Empirical CDF','discount_cdf.png',(0,1))
+	plotPDF(discount_samples,r'Price discount $\rho$',r'Empirical PDF','observe/discount_pdf.png',(0,1))
+	plotCDF(discount_samples,r'Price discount $\rho$',r'Empirical CDF','observe/discount_cdf.png',(0,1))
+
+	# draw airline freq
+	with open('observe/airline_name_samples.txt','r') as fh:
+		airline_samples = fh.readline().replace('\r\n', '').split('\t')
+	airline_samples = [int(e) for e in airline_samples]
+	airline_hist_bin = np.arange(-0.5,len(airline_samples)-0.5,1)
+	# airline_hist, airline_hist_bin = np.histogram(airline_samples, airline_hist_bin, range=(-0.5,len(airline_samples)-0.5))
+	airline_hist = (np.array(airline_samples), airline_hist_bin)
+
+	xticks_str = []
+	airlineNames = pickle.load(open('data/airlineIden.json'))
+	for key in airlineNames.keys():
+		xticks_str.append(key)
+	plotBars('Airline', 'Number', 1, (None, airline_hist), xticks_str=xticks_str,
+			 fig_name='observe/airline_hist.png')
 
 ###################################################################################
 #Passenger factors
 ###################################################################################
 # from myplotlib import plotBars
 def plotPassengerFactors():
-	with open('temp/female_age_samples.txt','r') as fh:
+	with open('observe/female_age_samples.txt','r') as fh:
 		female_age_samples=fh.readline().replace('\r\n','').split('\t')
 	female_age_samples=[float(e) for e in female_age_samples]
 	# female_age_samples=female_age_samples[0:100]
 
-	with open('temp/male_age_samples.txt','r') as fh:
+	with open('observe/male_age_samples.txt','r') as fh:
 		male_age_samples=fh.readline().replace('\r\n','').split('\t')
 	male_age_samples=[float(e) for e in male_age_samples]
 	# male_age_samples=male_age_samples[0:100]
@@ -117,8 +173,8 @@ def plotPassengerFactors():
 	for i in range(0,len(bins)-2):
 		xticks_str.append('[{0},{1})'.format(bins[i],bins[i+1]))
 	xticks_str.append('[{0},+)'.format(bins[-2]))
-	plotBars('Age','Number',2,(None,female_age_hist,male_age_hist),('Female','Male'),xticks_str,fig_name='age_num_hist.png')
-	plotBars('Age','Proportion',2,(None,female_age_prop_hist,male_age_prop_hist),('Female','Male'),xticks_str,fig_name='age_prop_hist.png',text_is_int=False)
+	plotBars('Age','Number',2,(None,female_age_hist,male_age_hist),('Female','Male'),xticks_str,fig_name='observe/age_num_hist.png')
+	plotBars('Age','Proportion',2,(None,female_age_prop_hist,male_age_prop_hist),('Female','Male'),xticks_str,fig_name='observe/age_prop_hist.png',text_is_int=False)
 
 from os.path import join
 import matplotlib as mpl
@@ -133,7 +189,7 @@ WORK_PATH='plots'
 BAR_FACE_COLORS=['white','darkgray','maroon','navy','darkolivegreen','dimgray']
 PATTERNS=['-','x','/']
 # BAR_FACE_COLORS=['r','b','y','g']
-def plotBars(xlabel_str,ylabel_str,nlines,data,legends,xticks_str=None,axis_range=None,fig_name='barplot.png', add_text=True, text_is_int=True):
+def plotBars(xlabel_str,ylabel_str,nlines,data,legends=None,xticks_str=None,axis_range=None,fig_name='observe/barplot.png', add_text=True, text_is_int=True):
 	x=data[0]
 	N=len(data[1])
 	ind = np.arange(0,3*N,3)+0.5  # the x locations for the groups
@@ -148,7 +204,11 @@ def plotBars(xlabel_str,ylabel_str,nlines,data,legends,xticks_str=None,axis_rang
 	ax = plt.subplot(111)
 	rects=[]
 	for k in range(0,nlines):
-		rect=ax.bar(ind+(k-(nlines-1.)/2)*bar_width, data[k+1],width=bar_width,color=BAR_FACE_COLORS[k], hatch=PATTERNS[k], align='center',label=legends[k])
+		if legends != None:
+			rect=ax.bar(ind+(k-(nlines-1.)/2)*bar_width, data[k+1],width=bar_width,color=BAR_FACE_COLORS[k], hatch=PATTERNS[k], align='center',label=legends[k])
+		else:
+			rect = ax.bar(ind + (k - (nlines - 1.) / 2) * bar_width, data[k + 1], width=bar_width,
+						  color=BAR_FACE_COLORS[k], hatch=PATTERNS[k], align='center', label=0)
 		rects.append(rect)
 	ax.set_xlabel(xlabel_str)
 	ax.set_ylabel(ylabel_str)
@@ -184,7 +244,7 @@ import operator
 def plotVisitingNumOfCity():
 	#read selected cities
 	cityNameDict={}
-	cityFile='temp/selected_cities.csv'
+	cityFile='observe/selected_cities.csv'
 	with open(cityFile,'rb') as fh:
 		lines=fh.readlines();
 	for r in lines:
@@ -194,7 +254,7 @@ def plotVisitingNumOfCity():
 	cityNameDict=dict(sorted(cityNameDict.items(),key=operator.itemgetter(0)))
 
 	#read data
-	dataFile='temp/TravelersOfEachCity.csv'
+	dataFile='observe/TravelersOfEachCity.csv'
 	departureDict={}
 	arrivalDict={}
 	with open(dataFile,'rb') as fh:
@@ -214,12 +274,14 @@ def plotVisitingNumOfCity():
 	departureMeans= np.array(departureMeans)*1./sum(departureMeans)
 	arrivalMeans= np.array(arrivalMeans)*1./sum(arrivalMeans)
 	xticks_str=cityNameDict.values()
-	plotBars('city','Number of passengers',2,(None,departureMeans,arrivalMeans),('Departure','Arrival'),xticks_str,fig_name='city_num_hist.png',text_is_int=False)
+	plotBars('city','Number of passengers',2,(None,departureMeans,arrivalMeans),('Departure','Arrival'),xticks_str,fig_name='observe/city_num_hist.png',text_is_int=False)
 
 
 if __name__ == '__main__':
+	dumpSamplePassengersInfo()
+	# extractReservationFactors()
 	# plotReservationFactors()
 	# extractFactors()
 	# plotFlightFactors()
-	plotPassengerFactors()
+	# plotPassengerFactors()
 	# plotVisitingNumOfCity()
