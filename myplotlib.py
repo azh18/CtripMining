@@ -18,7 +18,7 @@ MARKERS=['o','^','v''*']
 import numpy as np
 from os.path import join
 def plotLines(xlabel_str,ylabel_str,nlines,data,legends,axis_range=None,fig_name='lineplot.png'):
-	fig=plt.figure()
+	fig=plt.figure(figsize=(8,6))
 	for k in range(0,nlines):
 		(x,y)=data[k]
 		plt.plot(x,y,color=COLORS[k],linestyle=LINE_STYLES[k],label=legends[k],marker=MARKERS[k])
@@ -43,7 +43,7 @@ def plotBars(xlabel_str,ylabel_str,nlines,data,legends,xticks_str=None,axis_rang
 	print(nlines)
 
 	# fig=plt.figure(figsize=(26,13))
-	fig=plt.figure()
+	fig=plt.figure(figsize=(8,6))
 	ax = plt.subplot(111)
 	rects=[]
 	for k in range(0,nlines):
@@ -95,7 +95,7 @@ def plotPDF(data_samples,xlabel_str,ylabel_str,fig_name='pdf.png',xais_range=Non
 	# these are the values over wich your kernel will be evaluated
 	dist_space = np.linspace( min(data_samples), max(data_samples), N )
 	# plot the results
-	fig=plt.figure()
+	fig=plt.figure(figsize=(8,6))
 	x=dist_space
 	y=kde(dist_space)
 	plt.plot(x, y,markersize=0)  #pdf line with no markers
@@ -132,7 +132,7 @@ def plotCDF(data_samples,xlabel_str,ylabel_str,fig_name='cdf.png', xais_range=No
 	cdf/=cdf[-1] #normalized
 	print(min(data_samples),max(data_samples))
 	# plot the results
-	fig=plt.figure()
+	fig=plt.figure(figsize=(8,6))
 	plt.plot(dist_space, cdf,markersize=0)  #pdf line with no markers
 	plt.xlabel(xlabel_str)
 	plt.ylabel(ylabel_str)
@@ -140,7 +140,46 @@ def plotCDF(data_samples,xlabel_str,ylabel_str,fig_name='cdf.png', xais_range=No
 		plt.xlim(xais_range[0],xais_range[1])
 	# plt.savefig(join(WORK_PATH,fig_name))	
 	plt.savefig(fig_name)	
-	plt.close(fig)	
+	plt.close(fig)
+
+def plotFreq(data_samples,xlabel_str,ylabel_str,fig_name='cdf.png', xais_range=None,yaxis_range=None,
+			 xtick_gap=None, ytick_gap=None, shrinkScale=None,N=1000, yaxis_log=False):
+	#this create the kernel, given an array it will estimate the probability over that values
+	# kde = gaussian_kde( data_samples )
+	# these are the values over wich your kernel will be evaluated
+	#dist_space = np.linspace( min(data_samples), max(data_samples), N )
+	#cdf=np.cumsum(kde(dist_space))
+	#cdf/=cdf[-1] #normalized
+	# print(min(data_samples),max(data_samples))
+	# plot the results
+	data_samples = np.array(data_samples)
+	sample_bins = np.arange(np.amin(data_samples)-0.5,np.amax(data_samples)+0.5,1)
+	data_hist, data_bin = np.histogram(data_samples, sample_bins)
+	# shrinkscale: make the y num become small, for example: 50000->500
+	if shrinkScale is not None:
+		data_hist /= shrinkScale
+	fig=plt.figure(figsize=(8,6))
+	# plt.plot(dist_space, cdf,markersize=0)  #pdf line with no markers
+	if yaxis_log:
+		plt.semilogy(data_bin[0:len(data_bin)-1]+0.5, data_hist, lw=2)
+	else:
+		plt.plot(data_bin[0:len(data_bin)-1]+0.5, data_hist, lw=2)
+	plt.xlabel(xlabel_str)
+	plt.ylabel(ylabel_str)
+	if xais_range is not None:
+		plt.xlim(xais_range[0],xais_range[1])
+	if yaxis_range is not None:
+		plt.ylim(yaxis_range[0],yaxis_range[1])
+	if xtick_gap is not None:
+		x_tick = np.arange(xais_range[0],xais_range[1]+xtick_gap,xtick_gap)
+		plt.xticks(x_tick)
+	if ytick_gap is not None:
+		y_tick = np.arange(yaxis_range[0],yaxis_range[1]+xtick_gap,ytick_gap)
+		plt.yticks(y_tick)
+	plt.savefig(join(WORK_PATH,fig_name))
+	# plt.savefig(fig_name)
+	plt.close(fig)
+
 
 if __name__ == '__main__':
 	# # Example data

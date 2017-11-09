@@ -22,9 +22,12 @@ def getFrequentCities(records):  # assumption: the most frequent city is the tra
     proportion = freqDic[home] * 1.0 / (2 * len(records))
     return (home, proportion)
 
-
+# get home city of user from records
 def getHomeCity(records):
     return getFrequentCities(records)[0]
+
+def getAccessCityWithProportion(records):
+    return getFrequentCities(records)
 
 # get the expect income
 def getExpectIncome(records):
