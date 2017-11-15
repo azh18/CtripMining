@@ -36,8 +36,8 @@ def plotCityWithHotDensity(posList, densList, figureName='city'):
         lats = [p[1]]
         x, y = m(lons, lats)
         m.plot(x, y, markerfacecolor=colorDict[level], marker='o', markersize=markersizeDict[level])
-    # plt.savefig('{0}.png'.format(figureName))
-    fig.savefig(join(workpath, '{0}.png'.format(figureName)))
+    # plt.savefig('{0}.pdf'.format(figureName))
+    fig.savefig(join(workpath, '{0}.pdf'.format(figureName)))
 
 
 def discretizeDensity(dens):
@@ -91,8 +91,8 @@ def plotSparsity():
     # plt.xticks(fontsize=FONT_SIZE)
     # plt.ylabel('Number of passengers',fontsize=FONT_SIZE)
     # plt.yticks(fontsize=FONT_SIZE)
-    # plt.savefig(join(workpath,'sparsity.png'))
-    plotLines('Number of flights', 'Number of passengers', 1, [(X, numsList)], [''], None, 'sparsity.png')
+    # plt.savefig(join(workpath,'sparsity.pdf'))
+    plotLines('Number of flights', 'Number of passengers', 1, [(X, numsList)], [''], None, 'sparsity.pdf')
 
 
 def run():

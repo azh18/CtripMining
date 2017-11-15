@@ -16,7 +16,7 @@ Z = np.exp(-((X-1)**2+Y**2))
 plt.pcolormesh(X,Y,Z)
 plt.colorbar()
 # plt.show()
-plt.savefig('heatmap_test.png')
+plt.savefig('heatmap_test.pdf')
 
 
 

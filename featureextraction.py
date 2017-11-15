@@ -27,15 +27,26 @@ import commonoperation
 
 seatClassDict = {'Y': 1, 'F': 2, 'C': 3}  # Y: economy class, F: first class, C: bussiness class
 
-
-def extractFeatures(record):
+# if this record is the last one, use previous beta
+def extractFeatures(record, nextRecord = None, lastBeta = None):
     features = []
-    features.append(commonoperation.computeAdvancedDays(record[11], record[12]))  # num of advanced days
-    features.append(commonoperation.getDayType(record[12]))  # business day or not
-    features.append(commonoperation.getHourType(record[12]))  # 0-23h /2
-    features.append(seatClassDict[record[15]])  # seat class: first class, commerical, econimical seat
-    features.append(record[19]) #zbw: use price kpi? can represent choice more procise?
-    features.append(record[5])  # price discount
+    features.append(commonoperation.computeAdvancedDays(record[11], record[12]))  # num of advanced days 0
+    if nextRecord != None:
+        features.append(commonoperation.computeTimeDiff(nextRecord[12], record[12])) # difference between flights 1
+    else:
+        features.append(lastBeta)
+    features.append(commonoperation.getDayType(record[12]))  # business day or not 2
+    features.append(commonoperation.getHourType(record[12]))  # 0-23h /2 3
+    features.append(seatClassDict[record[15]])  # seat class: first class, commerical, econimical seat 4
+    features.append(record[19]) #zbw: use price kpi? can represent choice more procise? 5
+    features.append(record[5])  # price discount 6
+    numCompanion = commonoperation.executeSQL('select count from freq_orderid '
+                                               'where orderid=\'%s\'' % record[1])
+    if len(numCompanion)==0:
+        numCompanion = 1
+    else:
+        numCompanion = numCompanion[0][0]
+    features.append(numCompanion) # #companion 7
     return features
 
 
@@ -45,6 +56,14 @@ def generateFeaturesList(uId):
     records = commonoperation.getAllRecordsofAPassengerFromDB(uId)
     # feature only contains reservation and flight
     featuresList = []
-    for row in records:
-        featuresList.append(extractFeatures(row))
+    reclen = len(records)
+    for i in range(0, len(records)):
+        row = records[i]
+        if i < reclen - 1:
+            nextRow = records[i+1]
+            featuresList.append(extractFeatures(row, nextRecord=nextRow))
+        else:
+            lastBeta = featuresList[i-1][1]
+            featuresList.append(extractFeatures(row, lastBeta=lastBeta))
+        # featuresList[len(featuresList)-1] = [featuresList[len(featuresList)-1][i] for i in [0, 2, 3, 4, 6]]
     return featuresList

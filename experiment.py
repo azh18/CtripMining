@@ -300,8 +300,8 @@ if __name__ == '__main__':
     # test for passenger distribution
     # choose n user to make models
     passengers = random.sample(userSet, n)
-    modelUsers2(passengers)
-    # modelUsers3(passengers)
+    # modelUsers2(passengers)
+    modelUsers3(passengers)
 
 
 

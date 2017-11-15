@@ -22,7 +22,7 @@ def visualizeTrainedModel_v3():
 	modelName='mix-fKDE2_cv'
 	modelPath='models/{0}'.format(modelName)
 	# trainedModels=random.sample(os.listdir(modelPath),10)
-	trainedModels=['MTUyMzAxMTk4MTA5Mjk1NTIx_mix-fKDE2_cv.model']
+	trainedModels=['MjEwMTAyMTk2MzA5MTI1NjMy_mix-fKDE2_cv.model']
 	for m in trainedModels:
 		mFile= '{0}/{1}'.format(modelPath,m)
 		pId=mFile.split('/')[-1].replace('.model','').replace('_{0}'.format(modelName),'')
@@ -40,7 +40,7 @@ def visualizeTrainedModel_v3():
 		discount=0.8
 		price_kpi=0.8
 
-		fig = plt.figure()
+		fig = plt.figure(figsize=(8,6))
 		ax = fig.gca(projection='3d')
 		X=np.linspace(0,30,61) #num of advanced days
 		Y=np.arange(6,24,1) #hour type
@@ -61,7 +61,7 @@ def visualizeTrainedModel_v3():
 		ax.zaxis.set_major_locator(LinearLocator(10))
 		ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))	
 		fig.colorbar(surf, shrink=0.5, aspect=5)
-		ax.set_xlabel(r'#advanced days')
+		ax.set_xlabel(r'advanced days')
 		ax.set_ylabel(r'hour type')
 		ax.set_zlabel(r'density')
 
@@ -103,7 +103,7 @@ def visualizeTrainedModel_v3():
 # 	ax.set_yticks(np.linspace(0.5,11.5,12))
 # 	ax.set_yticklabels(['Dec 2013', 'Jan 2014', 'Feb 2014', 'Mar 2014', 'Apr 2014', 'May 2014','Jun 2014','Jul 2014','Aug 2014','Sep 2014','Oct 2014','Nov 2014'])
 
-# 	plt.savefig('plots/heatmap_of_takeoff_day.png')
+# 	plt.savefig('plots/heatmap_of_takeoff_day.pdf')
 # 	plt.close(fig)
 
 # import commonplot
@@ -116,7 +116,7 @@ def visualizeTrainedModel_v3():
 # 		fields=r.strip().split(',')
 # 		x.append(float(fields[2]))
 # 		y.append(float(fields[3]))
-# 	fileName='plots/profile_scatter.png'
+# 	fileName='plots/profile_scatter.pdf'
 # 	commonplot.plotScatterWithDensity(x,y,fileName)
 
 # def plotDistanceHist():
@@ -126,7 +126,7 @@ def visualizeTrainedModel_v3():
 # 	for r in lines:
 # 		fields=r.strip().split(',')
 # 		d.append(float(fields[2]))
-# 	fileName='plots/distance_hist.png'
+# 	fileName='plots/distance_hist.pdf'
 # 	commonplot.plotHistgram(d,50,fileName)
 
 if __name__ == '__main__':

@@ -285,7 +285,7 @@ def plotVisitingNumOfCity():
 
 	autolabel(rects1) 
 	autolabel(rects2) 
-	# plt.savefig('plots/visiting_num_of_city.png',figsize=(1000,400))  #not easy to control the size of the figure
+	# plt.savefig('plots/visiting_num_of_city.pdf',figsize=(1000,400))  #not easy to control the size of the figure
 	plt.show()
 	pass
 
@@ -353,7 +353,7 @@ def plotTakeoffDayDensity():
 	plt.colorbar()
 	ax.set_yticklabels(['Jan1 2014', 'Feb1 2014', 'Mar1 2014', 'Apr 2014', 'May 2014','Jun 2014','Jul 2014','Aug 2014','Sep 2014','Oct 2014','Nov 2014','Dec 2014'])
 
-	plt.savefig('heatmap_test.png')
+	plt.savefig('heatmap_test.pdf')
 
 # def plotFlightTimeDensity():
 # 	#read data
@@ -403,7 +403,7 @@ def plotProfileDensity():
 		fields=r.strip().split(',')
 		x.append(float(fields[2]))
 		y.append(float(fields[3]))
-	fileName='plots/profile_scatter.png'
+	fileName='plots/profile_scatter.pdf'
 	commonplot.plotScatterWithDensity(x,y,fileName)
 
 def plotDistanceHist():
@@ -413,7 +413,7 @@ def plotDistanceHist():
 	for r in lines:
 		fields=r.strip().split(',')
 		d.append(float(fields[2]))
-	fileName='plots/distance_hist.png'
+	fileName='plots/distance_hist.pdf'
 	commonplot.plotHistgram(d,50,fileName)
 
 # plotVisitingNumOfCity()

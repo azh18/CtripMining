@@ -94,13 +94,13 @@ def plotDetailedInfo(data1,data2):
 	xlabel_str='Takeoff hours'
 	ylabel_str='Proporation of flights at different hours'
 	xticks_str=[str(e) for e in range(6,24)]
-	plotBars(xlabel_str,ylabel_str,3,data1,legends, xticks_str,None,'Proporation_hours.png')
+	plotBars(xlabel_str,ylabel_str,3,data1,legends, xticks_str,None,'Proporation_hours.pdf')
 
 	legends=['Passenger A','Passenger B','Passenger C']
 	xlabel_str='Takeoff days'
 	ylabel_str='Proporation of flights in different days'
 	xticks_str=['Workday','Weekend','Holiday']
-	plotBars(xlabel_str,ylabel_str,3,data2,legends, xticks_str,None,'Proporation_days.png')
+	plotBars(xlabel_str,ylabel_str,3,data2,legends, xticks_str,None,'Proporation_days.pdf')
 
 
 from os.path import join
@@ -115,7 +115,7 @@ WORK_PATH='plots'
 BAR_FACE_COLORS=['darkred','navy','darkolivegreen','dimgray', 'cornflowerblue','teal']
 GRAYS=['white','darkgray','cornflowerblue','lightgray']
 PATTERNS=['/','\\','x','-',]
-def plotBars(xlabel_str,ylabel_str,nlines,data,legends,xticks_str=None,axis_range=None,fig_name='barplot.png', add_text=True, text_is_int=True):
+def plotBars(xlabel_str,ylabel_str,nlines,data,legends,xticks_str=None,axis_range=None,fig_name='barplot.pdf', add_text=True, text_is_int=True):
 	x=data[0]
 	N=len(data[1])
 	ind = np.arange(0,3*N,3)+0.5  # the x locations for the groups

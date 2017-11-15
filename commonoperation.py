@@ -71,7 +71,7 @@ def computeTimeDiff(takeofftime, ordertime):
 
 
 db_ip = 'localhost'
-db_ip = '202.120.37.78'
+db_ip = '202.120.37.79'
 db_user = 'admin'
 db_pwd = '2016_NRL_admin123'
 db_database = 'ctrip_air_travel'
@@ -115,7 +115,6 @@ def generateProfilesToDB():
         results = cursor.fetchall()
     except:
         print "Error: unable to fecth data"
-    db.close()
     userList = [x[0] for x in results]
     pieceSize = 10000
     userSamllList = [userList[i:i+pieceSize] for i in range(0,len(userList),pieceSize)]
@@ -126,6 +125,7 @@ def generateProfilesToDB():
             cursor.execute(sql)
         db.commit()
         print 'finish insert %d items\n'.format(len(userSamllList))
+    db.close()
 
 def getIncomeFromCityID(city):
     results = []
