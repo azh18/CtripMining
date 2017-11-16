@@ -92,7 +92,7 @@ class BehaviorModel(object):
         print('test')
         self.test()
         self.saveResult()
-        pass
+        return self
 
 
 # GMM

@@ -150,8 +150,6 @@ def modelUsers2(users):  # experiment 2
                 listTemp += (featureextraction.generateFeaturesList(n))
             featuresListOfNeighborsDims.append(listTemp)
 
-
-
         print('with others data')
         m3 = comparemethods.GMMModel(u, modelName='GMM2_2', trainData=traindata + featuresListOfNeighbors,
                                      testData=testdata)
@@ -195,8 +193,9 @@ def modelUsers2(users):  # experiment 2
         m6.setVariables(bandwidth='cv_ml', bandwidth1='cv_ml')
         m6.run()
         # test set components according to the dim
-        m7 = comparemethods.mixfKDEModelDim(u, modelName='mix-fKDE2_cv_moreComponents', trainData=traindata, testData=testdata,
-                                         trainDataOfNeighbors=featuresListOfNeighborsDims)
+        m7 = comparemethods.mixfKDEModelDim(u, modelName='mix-fKDE2_cv_moreComponents', trainData=traindata,
+                                            testData=testdata,
+                                            trainDataOfNeighbors=featuresListOfNeighborsDims)
         m7.setVariables(bandwidth='cv_ml', bandwidth1='cv_ml')
         m7.run()
         # add city do not work
@@ -281,6 +280,135 @@ def loadResults(resultFolder='results'):
         print('{0}: avg is {1}, std is {2}'.format(methodName, sum(results) / len(results), np.std(results)))
 
 
+class ModelRecommendationTest:
+    def __init__(self, modelName):
+        self.modelName = modelName
+        self.modelList = []
+        self.userList = []
+        self.timestamp = {}
+        self.hitRate = {}
+        self.realRecord = {}
+
+    def generateTestUser(self):
+        self.userList = usergeneration.userSet
+        return 0
+
+    def trainGMM(self):
+        pass
+
+    def trainfKDE(self):
+        pass
+
+    def trainmixKDE(self):
+        pass
+
+    def trainModel(self):
+        for u in self.userList:
+            print(u)
+            datapreparation.prepareData(u)
+            traindata = datapreparation.getTraindata(u)
+            testdata = datapreparation.getTestdata(u)
+
+            print('only train data')
+            # GMM
+            m1 = comparemethods.GMMModel(u, modelName='GMM1_2', trainData=traindata, testData=testdata)
+            m1.setVariables(nComponents=2)
+            m1.train()
+
+            m1 = comparemethods.GMMModel(u, modelName='GMM1_3', trainData=traindata, testData=testdata)
+            m1.setVariables(nComponents=3)
+            m1.run()
+
+            # m2 = comparemethods.fKDEModel(u, modelName='fKDE1_Silverman', trainData=traindata, testData=testdata)
+            # m2.setVariables(bandwidth='Silverman')
+            # m2.run()
+
+            # m2 = comparemethods.fKDEModel(u, modelName='fKDE1_0.5', trainData=traindata, testData=testdata)
+            # m2.setVariables(bandwidth=0.5)
+            # m2.run()
+            #
+            # m2 = comparemethods.fKDEModel(u, modelName='fKDE1_1', trainData=traindata, testData=testdata)
+            # m2.setVariables(bandwidth=1)
+            # m2.run()
+
+            m2 = comparemethods.fKDEModel(u, modelName='fKDE1_1.5', trainData=traindata, testData=testdata)
+            m2.setVariables(bandwidth=1.5)
+            m2.run()
+
+            neighbors = usergeneration.getSimilarUsers(u)
+            featuresListOfNeighbors = []
+            for n in neighbors:
+                featuresListOfNeighbors += featureextraction.generateFeaturesList(n)
+
+            # try another method: find neighbors on each dimension, each idx represents a dim
+            featuresListOfNeighborsDims = []
+            for i in range(0, len(basicmining.getProfile(u))):
+                neighbors = usergeneration.getSimilarUsersDim(u, i)
+                listTemp = []
+                for n in neighbors:
+                    listTemp += (featureextraction.generateFeaturesList(n))
+                featuresListOfNeighborsDims.append(listTemp)
+
+            print('with others data')
+            # m3 = comparemethods.GMMModel(u, modelName='GMM2_2', trainData=traindata + featuresListOfNeighbors,
+            #                              testData=testdata)
+            # m3.setVariables(nComponents=2)
+            # m3.run()
+            #
+            # m3 = comparemethods.GMMModel(u, modelName='GMM2_3', trainData=traindata + featuresListOfNeighbors,
+            #                              testData=testdata)
+            # m3.setVariables(nComponents=3)
+            # m3.run()
+
+            # print('fKDE2_Silverman')
+            # m4 = comparemethods.fKDEModel(u, modelName='fKDE2_Silverman', trainData=traindata + featuresListOfNeighbors,
+            #                               testData=testdata)
+            # m4.setVariables(bandwidth='Silverman')
+            # m4.run()
+            #
+            # # print('mix-fKDE2_bw')
+            # m6 = comparemethods.mixfKDEModel(u, modelName='mix-fKDE2_Silverman', trainData=traindata, testData=testdata,
+            #                                  trainDataOfNeighbors=featuresListOfNeighbors)
+            # m6.setVariables(bandwidth='Silverman', bandwidth1='Silverman')
+            # m6.run()
+            #
+            # m6 = comparemethods.mixfKDEModel(u, modelName='mix-fKDE2_0.5', trainData=traindata, testData=testdata,
+            #                                  trainDataOfNeighbors=featuresListOfNeighbors)
+            # m6.setVariables(bandwidth=0.5, bandwidth1=0.5)
+            # m6.run()
+            #
+            # m6 = comparemethods.mixfKDEModel(u, modelName='mix-fKDE2_1', trainData=traindata, testData=testdata,
+            #                                  trainDataOfNeighbors=featuresListOfNeighbors)
+            # m6.setVariables(bandwidth=1, bandwidth1=1)
+            # m6.run()
+            #
+            # m6 = comparemethods.mixfKDEModel(u, modelName='mix-fKDE2_1.5', trainData=traindata, testData=testdata,
+            #                                  trainDataOfNeighbors=featuresListOfNeighbors)
+            # m6.setVariables(bandwidth=1.5, bandwidth1=1.5)
+            # m6.run()
+
+            m6 = comparemethods.mixfKDEModel(u, modelName='mix-fKDE2_cv', trainData=traindata, testData=testdata,
+                                             trainDataOfNeighbors=featuresListOfNeighbors)
+            m6.setVariables(bandwidth='cv_ml', bandwidth1='cv_ml')
+            m6.run()
+            # test set components according to the dim
+            m7 = comparemethods.mixfKDEModelDim(u, modelName='mix-fKDE2_cv_moreComponents', trainData=traindata,
+                                                testData=testdata,
+                                                trainDataOfNeighbors=featuresListOfNeighborsDims)
+            m7.setVariables(bandwidth='cv_ml', bandwidth1='cv_ml')
+            m7.run()
+        pass
+
+    def recommend(self, timestamp, user, record):
+        pass
+
+    def hitTest(self):
+        pass
+
+    def showHitRate(self):
+        pass
+
+
 #################################################################################
 if __name__ == '__main__':
     print('train and test')
@@ -294,8 +422,8 @@ if __name__ == '__main__':
     fileObj = open("userFeature.json", 'w+')
     jsObj = json.dump(dictTemp, fileObj)
     # fileObj.write(jsObj)
-    #jsObj = json.dumps(basicmining.profileDict)
-    #fileObj.write(jsObj)
+    # jsObj = json.dumps(basicmining.profileDict)
+    # fileObj.write(jsObj)
     fileObj.close()
     # test for passenger distribution
     # choose n user to make models
