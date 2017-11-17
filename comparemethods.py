@@ -55,6 +55,10 @@ class BehaviorModel(object):
         self.ll = None
         pass
 
+    def testACase(self, testData):
+        self.ll = None
+        pass
+
     # def prepareData(self):
     # 	pass
 
@@ -116,6 +120,11 @@ class GMMModel(BehaviorModel):
         self.ll = sum(self.trainedModel.score(self.testData)) * 1. / len(self.testData)  # compute log likelihood
         pass
 
+    def testACase(self, testData):
+        ll = sum(self.trainedModel.score(testData)) * 1. / len(testData)
+        return ll
+
+
 
 # fKDE
 import sys
@@ -172,6 +181,10 @@ class fKDEModel(BehaviorModel):
     def test(self):
         self.ll = sum(self.trainedModel.score_samples(self.testData)) * 1. / len(
             self.testData)  # compute log likelihood
+
+    def testACase(self, testData):
+        ll = sum(self.trainedModel.score_samples(testData)) * 1. / len(testData)
+        return ll
 
 
 # mixfKDE
@@ -245,6 +258,10 @@ class mixfKDEModelDim(fKDEModel):
         # self.ll= sum([math.log(x) for x in probs])
         self.ll = self.trainedModel.computeLogLikelihood(self.testData)
 
+    def testACase(self, testData):
+        ll = sum(self.trainedModel.computeLogLikelihood(testData)) * 1. / len(testData)
+        return ll
+
 class mixfKDEModel(fKDEModel):
     trainDataOfNeighbors = None
     # variables
@@ -298,3 +315,7 @@ class mixfKDEModel(fKDEModel):
         # probs=self.computeProbs(self.testData)
         # self.ll= sum([math.log(x) for x in probs])
         self.ll = self.trainedModel.computeLogLikelihood(self.testData)
+
+    def testACase(self, testData):
+        ll = sum(self.trainedModel.computeLogLikelihood(testData)) * 1. / len(testData)
+        return ll
