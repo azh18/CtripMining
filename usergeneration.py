@@ -197,7 +197,7 @@ workpath = 'temp'
 # inactive users: users that has few records (<30)
 # abnormal usrs: users that has too many records(>500)
 bounds = (30, 500)
-N = 1000  # initial 1000
+N = 2  # initial 1000
 
 userSet = generateSamplesOfActivePassengers(N)
 # print(userSet[:10])

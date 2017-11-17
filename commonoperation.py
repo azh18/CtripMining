@@ -75,6 +75,7 @@ db_ip = '202.120.37.79'
 db_user = 'admin'
 db_pwd = '2016_NRL_admin123'
 db_database = 'ctrip_air_travel'
+db_database = 'Xiami'
 # db_sock = '/home/mysql/mysql.sock'
 db_sock = '/var/lib/mysql/mysql.sock'
 # default sock is '/var/lib/mysql/mysql.sock'
@@ -173,6 +174,7 @@ def getNFlightsOfAPassengerFromDB(pid):
     db = MySQLdb.connect(host=db_ip, user=db_user, passwd=db_pwd,
                          db=db_database, unix_socket=db_sock, port=10002)
     cursor = db.cursor()
+    result = [[[]]]
     sql = "SELECT count from passenger_flight_counts where passengerid='{0}';".format(pid)
     try:
         cursor.execute(sql)
@@ -187,11 +189,12 @@ def executeSQL(sql_str):
     db = MySQLdb.connect(host=db_ip, user=db_user, passwd=db_pwd,
                          db=db_database, unix_socket=db_sock, port=10002)
     cursor = db.cursor()
+    result = []
     try:
         cursor.execute(sql_str)
         result = cursor.fetchall()
     except:
-        print "Error: unable to fecth data. FUNCTION:executeSQL"
+        print "Error: unable to fecth data. FUNCTION:executeSQL,%s" % sql_str
     db.close()
     return result
 

@@ -423,14 +423,12 @@ def generateUnnormalizedProfilesMultiThread(allUsers, nThreads=4):
     # 	print(len(p))
     return profileDict
 
-
-
 def compareProfiles(x, y):
     MAX = 10000
     if x is None or y is None:
         print 'one of profile is not in db\n'
         return MAX
-    d = sklearn.metrics.pairwise.euclidean_distances(x, y)[0][0]
+    d = sklearn.metrics.pairwise.euclidean_distances(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))[0][0]
     d = round(d, 3)
     return d
 

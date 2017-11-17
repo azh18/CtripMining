@@ -292,18 +292,25 @@ class ModelRecommendationTest:
         self.userTestData = {}
         self.featureListOfNeighbors = {}
         self.featureListOfNeighborsDim = {}
+        self.lastRecordOfTrainingSet = {}
 
     # generate train data, test data and similar user data, only once
     def generateTestUser(self, needNeighbor=False, needNeighborDim=False):
         self.userList = usergeneration.userSet
+        nThreads = 4
+        basicmining.profileDict = basicmining.generateProfilesMultiThread(usergeneration.userSet, nThreads)
         for u in self.userList:
             print(u)
-            self.userList.append(u)
             datapreparation.prepareData(u)
             self.userTrainData[u] = datapreparation.getTraindata(u)
             self.userTestData[u] = datapreparation.getTestdata(u)
             # generate timestamps
-            for record in self.userTestData[u]:
+            # should only use test set?
+            allRecord = commonoperation.getAllRecordsofAPassengerFromDB(u)
+            proportion = 0.7
+            splitlingPoint = int(len(allRecord) * proportion)
+            self.lastRecordOfTrainingSet[u] = allRecord[splitlingPoint-1]
+            for record in allRecord[splitlingPoint:]:
                 if u in self.realRecord.keys():
                     self.realRecord[u].append(record)
                     self.timestamp[u].append(record[11])
@@ -437,8 +444,13 @@ class ModelRecommendationTest:
     # generate a ticket pool in which tickets are ordered in date of timestamp
     def generateTicketPool(self, timestamp, dcity, acity):
         print 'generating TicketPool ...'
-        validRecords = commonoperation.executeSQL('')
+        validRecords = commonoperation.executeSQL('select * from TravelRecords '
+                                                  'where orderdate = DATE_FORMAT(\'%s\',\'%%Y-%%m-%%d\') and dcity=\'%s\''
+                                                  ' and acity=\'%s\'' % (timestamp, dcity, acity))
         print 'ticketpool generated.'
+        if validRecords == None:
+            print 'No valid record: from %s to %s at %s' % (dcity, acity, timestamp)
+            return []
         validTickets = []
         flights = []
         for r in validRecords:
@@ -463,17 +475,20 @@ class ModelRecommendationTest:
         return features
 
     # one recommendation, return whether recommendation is successful
-    def recommend(self, timestamp, user, record, k):
+    def recommend(self, timestamp, user, record, k, lastTakeoffTime):
         # use a record to represent a ticket (only feature about ticket, no user info)
         dcity = record[7]
         acity = record[8]
         tickets = self.generateTicketPool(timestamp, dcity, acity)
+        if len(tickets) == 0:
+            # no valid ticket
+            return -1
         # form feature list
         # a rank list to maintain tickets
         ticketLL = {}
         cntTicket = 0
         for ticket in tickets:
-            features = self.generateTicketFeature(ticket)
+            features = self.generateTicketFeature(ticket, timestamp, lastTakeoffTime)
             model = self.modelList[user]
             ll = model.testACase(features)
             ticketLL[cntTicket] = ll
@@ -482,7 +497,7 @@ class ModelRecommendationTest:
         chooseTicket = [tickets[pair[0]] for pair in chooseTicket]
         # chooseTicket is a list of records corresponding to the ticket
         chooseTicket = chooseTicket[0: (k - 1 if k < len(chooseTicket) else len(chooseTicket) - 1)]
-        isHit = self.hitTest(chooseTicket, record)
+        isHit = self.hitTest(chooseTicket, record) # True or False
         return isHit
 
     # test if realRecord match the chosen ticket: flight, takeoff time and seat class
@@ -505,12 +520,21 @@ class ModelRecommendationTest:
             totalNumRecordUser = len(self.realRecord[u])
             totalNumRecord += totalNumRecordUser
             successRecommendNumUser = 0
+            lastTakeoffTime = self.lastRecordOfTrainingSet[u][12]
             for (timestamp, record) in zip(self.timestamp[u], self.realRecord[u]):
                 print 'Recommend: time %s' % timestamp
-                success = self.recommend(timestamp, u, record, k)
-                if success:
-                    successRecommendNumUser += 1
-            self.hitRate[u] = successRecommendNumUser * 1. / totalNumRecordUser
+                success = self.recommend(timestamp, u, record, k, lastTakeoffTime)
+                lastTakeoffTime = record[12]
+                if success == -1:
+                    totalNumRecordUser -= 1
+                    totalNumRecord -= 1
+                else:
+                    if success:
+                        successRecommendNumUser += 1
+            if totalNumRecordUser > 0:
+                self.hitRate[u] = successRecommendNumUser * 1. / totalNumRecordUser
+            else:
+                print 'user %s do not have valid recommendation.' % u
             totalSuccess += successRecommendNumUser
         print 'Finish. Recommend on model %s at k=%d, accurate = %f.' % (self.modelName, k,
                                                                          (totalSuccess * 1. / totalNumRecord))
@@ -562,31 +586,33 @@ class ModelRecommendationTestmixKDE(ModelRecommendationTest):
 
 #################################################################################
 if __name__ == '__main__':
-    print('train and test')
-    n = 1000  # initial 1000
-    nThreads = 8
-    # choose 1000 random samples
-    userSet = usergeneration.userSet
-    basicmining.profileDict = basicmining.generateProfilesMultiThread(userSet, nThreads)
-    # test for passenger distribution
-    dictTemp = basicmining.generateUnnormalizedProfilesMultiThread(userSet, nThreads)
-    fileObj = open("userFeature.json", 'w+')
-    jsObj = json.dump(dictTemp, fileObj)
-    # fileObj.write(jsObj)
-    # jsObj = json.dumps(basicmining.profileDict)
-    # fileObj.write(jsObj)
-    fileObj.close()
-    # test for passenger distribution
-    # choose n user to make models
-    passengers = random.sample(userSet, n)
-    # modelUsers2(passengers)
-    modelUsers3(passengers)
+    # print('train and test')
+    # n = 1000  # initial 1000
+    # nThreads = 8
+    # # choose 1000 random samples
+    # userSet = usergeneration.userSet
+    # basicmining.profileDict = basicmining.generateProfilesMultiThread(userSet, nThreads)
+    # # test for passenger distribution
+    # dictTemp = basicmining.generateUnnormalizedProfilesMultiThread(userSet, nThreads)
+    # fileObj = open("userFeature.json", 'w+')
+    # jsObj = json.dump(dictTemp, fileObj)
+    # # fileObj.write(jsObj)
+    # # jsObj = json.dumps(basicmining.profileDict)
+    # # fileObj.write(jsObj)
+    # fileObj.close()
+    # # test for passenger distribution
+    # # choose n user to make models
+    # passengers = random.sample(userSet, n)
+    # # modelUsers2(passengers)
+    # modelUsers3(passengers)
 
     # recommendation experiment
     for k in range(5, 15, 5):
         gmm1 = ModelRecommendationTestGMM('gmm2')
         gmm1.generateTestUser(needNeighbor=True, needNeighborDim=True)
         gmm1.train(nComponents=2)
+        gmm1.runRecommend(k)
+        gmm1.showHitRate()
 
         gmm2 = ModelRecommendationTestGMM('gmm3')
         gmm2.copyUserInfo(gmm1)
