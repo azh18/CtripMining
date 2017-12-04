@@ -281,7 +281,7 @@ def loadResults(resultFolder='results'):
 
 
 class ModelRecommendationTest:
-    def __init__(self, modelName):
+    def __init__(self, modelName, k):
         self.modelName = modelName
         self.userList = []
         self.modelList = {}
@@ -293,6 +293,16 @@ class ModelRecommendationTest:
         self.featureListOfNeighbors = {}
         self.featureListOfNeighborsDim = {}
         self.lastRecordOfTrainingSet = {}
+        self.k = k
+        detailFile = "recommend_detail_%s_k%d.txt" % (self.modelName, self.k)
+        hitrateFile = "hitrate_%s_k%d.txt" % (self.modelName, self.k)
+        self.detailFile = open(detailFile, 'w+')
+        self.hitrateFile = open(hitrateFile, 'w+')
+
+    def closeFile(self):
+        self.detailFile.close()
+        self.hitrateFile.close()
+
 
     # generate train data, test data and similar user data, only once
     def generateTestUser(self, needNeighbor=False, needNeighborDim=False):
@@ -306,10 +316,11 @@ class ModelRecommendationTest:
             self.userTestData[u] = datapreparation.getTestdata(u)
             # generate timestamps
             # should only use test set?
+            print 'stage 1'
             allRecord = commonoperation.getAllRecordsofAPassengerFromDB(u)
             proportion = 0.7
             splitlingPoint = int(len(allRecord) * proportion)
-            self.lastRecordOfTrainingSet[u] = allRecord[splitlingPoint-1]
+            self.lastRecordOfTrainingSet[u] = allRecord[splitlingPoint - 1]
             for record in allRecord[splitlingPoint:]:
                 if u in self.realRecord.keys():
                     self.realRecord[u].append(record)
@@ -317,12 +328,14 @@ class ModelRecommendationTest:
                 else:
                     self.realRecord[u] = [record]
                     self.timestamp[u] = [record[11]]
+            print 'stage 2'
             if needNeighbor:
                 featuresListOfNeighbors = []
                 neighbors = usergeneration.getSimilarUsers(u)
                 for n in neighbors:
                     featuresListOfNeighbors += featureextraction.generateFeaturesList(n)
                 self.featureListOfNeighbors[u] = featuresListOfNeighbors
+            print 'stage 3'
             if needNeighborDim:
                 featuresListOfNeighborsDims = []
                 for i in range(0, len(basicmining.getProfile(u))):
@@ -332,6 +345,7 @@ class ModelRecommendationTest:
                         listTemp += (featureextraction.generateFeaturesList(n))
                     featuresListOfNeighborsDims.append(listTemp)
                 self.featureListOfNeighborsDim[u] = featuresListOfNeighborsDims
+            print 'stage 4'
         return 0
 
     # copy user data among models, no need to generate again
@@ -343,6 +357,7 @@ class ModelRecommendationTest:
         self.featureListOfNeighborsDim = otherTestObject.featureListOfNeighborsDim
         self.realRecord = otherTestObject.realRecord
         self.timestamp = otherTestObject.timestamp
+        self.lastRecordOfTrainingSet = otherTestObject.lastRecordOfTrainingSet
 
     def trainModel(self):
         # for u in self.userList:
@@ -441,6 +456,11 @@ class ModelRecommendationTest:
         #     m7.run()
         print 'please run sub-class function: trainModel'
 
+    def getUserLikelihood(self, u):
+        model = self.modelList[u]
+        model.test()
+        return model.ll
+
     # generate a ticket pool in which tickets are ordered in date of timestamp
     def generateTicketPool(self, timestamp, dcity, acity):
         print 'generating TicketPool ...'
@@ -470,8 +490,9 @@ class ModelRecommendationTest:
             featureextraction.seatClassDict[record[15]])  # seat class: first class, commerical, econimical seat 4
         features.append(record[19])  # zbw: use price kpi? can represent choice more procise? 5
         features.append(record[5])  # price discount 6
-        numCompanion = 1  # try 1
-        features.append(numCompanion)  # #companion 7
+        #numCompanion = 1  # try 1
+
+        #features.append(numCompanion)  # #companion 7
         return features
 
     # one recommendation, return whether recommendation is successful
@@ -494,25 +515,33 @@ class ModelRecommendationTest:
             ticketLL[cntTicket] = ll
             cntTicket += 1
         chooseTicket = sorted(ticketLL.items(), key=lambda t: t[1], reverse=True)
-        chooseTicket = [tickets[pair[0]] for pair in chooseTicket]
+        topkTickets = []
+        for i in xrange(0, (k if k < len(chooseTicket) else len(chooseTicket))):
+            topkTickets.append(tickets[chooseTicket[i][0]])
+        # chooseTicket = [tickets[pair[0]] for pair in chooseTicket]
         # chooseTicket is a list of records corresponding to the ticket
-        chooseTicket = chooseTicket[0: (k - 1 if k < len(chooseTicket) else len(chooseTicket) - 1)]
-        isHit = self.hitTest(chooseTicket, record) # True or False
+        # chooseTicket = chooseTicket[0: (k - 1 if k < len(chooseTicket) else len(chooseTicket) - 1)]
+        (isHit, hitrank) = self.hitTest(topkTickets, record)  # True or False
+        if isHit:
+            self.writeDetailResult(self.modelName, self.k, user, [item[1] for item in chooseTicket], len(tickets), hitrank)
         return isHit
 
     # test if realRecord match the chosen ticket: flight, takeoff time and seat class
     def hitTest(self, chooseTicket, realRecord):
         Hit = False
+        hitrank = 0
         for ticket in chooseTicket:
+            hitrank += 1
             match = True and (ticket[3] == realRecord[3])
             match = True and (ticket[12] == realRecord[12])
             match = match and (ticket[15] == realRecord[15])
             Hit = Hit or match
             if Hit:
-                return Hit
-        return Hit
+                return (Hit, hitrank)
+        return (Hit, hitrank)
 
     def runRecommend(self, k):
+        self.k = k
         totalNumRecord = 0
         totalSuccess = 0
         for u in self.userList:
@@ -536,14 +565,29 @@ class ModelRecommendationTest:
             else:
                 print 'user %s do not have valid recommendation.' % u
             totalSuccess += successRecommendNumUser
+            overallLL = self.getUserLikelihood(u)
+            self.writeHitRate(u, totalNumRecordUser, successRecommendNumUser, overallLL)
         print 'Finish. Recommend on model %s at k=%d, accurate = %f.' % (self.modelName, k,
                                                                          (totalSuccess * 1. / totalNumRecord))
         return (totalSuccess * 1. / totalNumRecord)
 
-    def showHitRate(self):
+    def writeDetailResult(self, modelName, k, uid, lllist, poolSize, hitRank):
+        fp = self.detailFile
+        fp.write('Model:%s; k:%d; User :%s; PoolSize:%d; HitRank:%d; ll:%s;\n'%
+                 (modelName, k, uid, poolSize, hitRank, str(lllist)))
+
+    def writeHitRate(self, u, totalRecomm, hitNum, overallLL):
+        print 'User %s Hitting Rate:%f' % (u, self.hitRate[u])
+        fp = self.hitrateFile
+        fp.write('Model:%s; k:%d; User :%s; Total:%d; Hit:%d; Hitting Rate:%f; Overall LL:%f;\n' %
+                 (self.modelName, self.k, u, totalRecomm, hitNum, self.hitRate[u], overallLL))
+
+    def showHitRate(self, outputFile=None):
         for u in self.hitRate:
             print 'User %s Hitting Rate:%f' % (u, self.hitRate[u])
-
+            if outputFile != None:
+                fp = open(outputFile, 'a+')
+                fp.write('Model:%s; k:%d; User :%s; Hitting Rate:%f;\n' % (self.modelName, self.k, u, self.hitRate[u]))
 
 class ModelRecommendationTestGMM(ModelRecommendationTest):
     def train(self, nComponents=2):
@@ -554,6 +598,9 @@ class ModelRecommendationTestGMM(ModelRecommendationTest):
             m1.train()
             self.modelList[u] = m1
         return 0
+
+
+
 
 
 class ModelRecommendationTestfKDE(ModelRecommendationTest):
@@ -575,7 +622,7 @@ class ModelRecommendationTestmixKDE(ModelRecommendationTest):
                                                  , testData=self.userTestData[u],
                                                  trainDataOfNeighbors=self.featureListOfNeighbors[u])
             else:
-                m6 = comparemethods.mixfKDEModel(u, modelName=self.modelName, trainData=self.userTrainData[u]
+                m6 = comparemethods.mixfKDEModelDim(u, modelName=self.modelName, trainData=self.userTrainData[u]
                                                  , testData=self.userTestData[u],
                                                  trainDataOfNeighbors=self.featureListOfNeighborsDim[u])
             m6.setVariables(bandwidth='cv_ml', bandwidth1='cv_ml')
@@ -587,42 +634,59 @@ class ModelRecommendationTestmixKDE(ModelRecommendationTest):
 #################################################################################
 if __name__ == '__main__':
     # print('train and test')
-    # n = 1000  # initial 1000
+    # n = 10  # initial 1000
     # nThreads = 8
-    # # choose 1000 random samples
+    # # # choose 1000 random samples
     # userSet = usergeneration.userSet
     # basicmining.profileDict = basicmining.generateProfilesMultiThread(userSet, nThreads)
-    # # test for passenger distribution
-    # dictTemp = basicmining.generateUnnormalizedProfilesMultiThread(userSet, nThreads)
-    # fileObj = open("userFeature.json", 'w+')
-    # jsObj = json.dump(dictTemp, fileObj)
-    # # fileObj.write(jsObj)
-    # # jsObj = json.dumps(basicmining.profileDict)
-    # # fileObj.write(jsObj)
-    # fileObj.close()
-    # # test for passenger distribution
-    # # choose n user to make models
+    # # # test for passenger distribution
+    # # dictTemp = basicmining.generateUnnormalizedProfilesMultiThread(userSet, nThreads)
+    # # fileObj = open("userFeature.json", 'w+')
+    # # jsObj = json.dump(dictTemp, fileObj)
+    # # # fileObj.write(jsObj)
+    # # # jsObj = json.dumps(basicmining.profileDict)
+    # # # fileObj.write(jsObj)
+    # # fileObj.close()
+    # # # test for passenger distribution
+    # # # choose n user to make models
     # passengers = random.sample(userSet, n)
-    # # modelUsers2(passengers)
-    # modelUsers3(passengers)
+    # modelUsers2(passengers)
+    # # modelUsers3(passengers)
 
     # recommendation experiment
-    for k in range(5, 15, 5):
-        gmm1 = ModelRecommendationTestGMM('gmm2')
+    for k in range(3, 18, 3):
+        gmm1 = ModelRecommendationTestGMM('gmm2', k)
         gmm1.generateTestUser(needNeighbor=True, needNeighborDim=True)
         gmm1.train(nComponents=2)
         gmm1.runRecommend(k)
-        gmm1.showHitRate()
+        # gmm1.showHitRate(outputFile='recommendTest_gmm2_k%d.txt'%k)
+        gmm1.closeFile()
 
-        gmm2 = ModelRecommendationTestGMM('gmm3')
+        gmm2 = ModelRecommendationTestGMM('gmm3', k)
         gmm2.copyUserInfo(gmm1)
         gmm2.train(nComponents=3)
-        fkde = ModelRecommendationTestfKDE('fKDE')
+        gmm2.runRecommend(k)
+        # gmm2.showHitRate(outputFile='recommendTest_gmm3_k%d.txt'%k)
+        gmm2.closeFile()
+
+
+        fkde = ModelRecommendationTestfKDE('fKDE', k)
         fkde.copyUserInfo(gmm1)
         fkde.train(bandwidth=1.5)
-        mixKDE_Euclid = ModelRecommendationTestmixKDE('mixKDE-Euclid')
+        fkde.runRecommend(k)
+        # fkde.showHitRate(outputFile='recommendTest_fkde_k%d.txt'%k)
+        fkde.closeFile()
+
+        mixKDE_Euclid = ModelRecommendationTestmixKDE('mixKDE-Euclid', k)
         mixKDE_Euclid.copyUserInfo(gmm1)
         mixKDE_Euclid.train(simiDefine='Euclid')
-        mixKDE_Dim = ModelRecommendationTestmixKDE('mixKDE-Dim')
+        mixKDE_Euclid.runRecommend(k)
+        # mixKDE_Euclid.showHitRate(outputFile='recommendTest_mixKDE_Euclid_k%d.txt'%k)
+        mixKDE_Euclid.closeFile()
+
+        mixKDE_Dim = ModelRecommendationTestmixKDE('mixKDE-Dim', k)
         mixKDE_Dim.copyUserInfo(gmm1)
         mixKDE_Dim.train(simiDefine='Dim')
+        mixKDE_Dim.runRecommend(k)
+        # mixKDE_Dim.showHitRate(outputFile='recommendTest_mixKDE_Dim_k%d.txt'%k)
+        mixKDE_Dim.closeFile()

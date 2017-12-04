@@ -259,7 +259,7 @@ class mixfKDEModelDim(fKDEModel):
         self.ll = self.trainedModel.computeLogLikelihood(self.testData)
 
     def testACase(self, testData):
-        ll = sum(self.trainedModel.computeLogLikelihood(testData)) * 1. / len(testData)
+        ll = self.trainedModel.computeLogLikelihood(testData)
         return ll
 
 class mixfKDEModel(fKDEModel):
@@ -317,5 +317,5 @@ class mixfKDEModel(fKDEModel):
         self.ll = self.trainedModel.computeLogLikelihood(self.testData)
 
     def testACase(self, testData):
-        ll = sum(self.trainedModel.computeLogLikelihood(testData)) * 1. / len(testData)
+        ll = self.trainedModel.computeLogLikelihood(testData)
         return ll

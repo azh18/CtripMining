@@ -27,10 +27,10 @@ import commonoperation
 
 seatClassDict = {'Y': 1, 'F': 2, 'C': 3}  # Y: economy class, F: first class, C: bussiness class
 
-freq_order_dict = {}
-freq_order = commonoperation.executeSQL('select orderid, count from freq_orderid')
-for item in freq_order:
-    freq_order_dict[item[0]] = item[1]
+# freq_order_dict = {}
+# freq_order = commonoperation.executeSQL('select orderid, count from freq_orderid')
+# for item in freq_order:
+#     freq_order_dict[item[0]] = item[1]
 
 # if this record is the last one, use previous beta
 from time import time
@@ -57,11 +57,11 @@ def extractFeatures(record, nextRecord=None, lastBeta=None):
     #     numCompanion = 1
     # else:
     #     numCompanion = numCompanion[0][0]
-    if record[1] in freq_order_dict.keys():
-        numCompanion = freq_order_dict[record[1]]
-    else:
-        numCompanion = 1
-    features.append(numCompanion)  # #companion 7
+    # if record[1] in freq_order_dict.keys():
+    #     numCompanion = freq_order_dict[record[1]]
+    # else:
+    #     numCompanion = 1
+    # features.append(numCompanion)  # #companion 7
     # t4 = time.time()
     # print 'time: {0},{1},{2}.{3}'.format(t1, t2, t3, t4)
     return features

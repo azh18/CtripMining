@@ -197,9 +197,13 @@ workpath = 'temp'
 # inactive users: users that has few records (<30)
 # abnormal usrs: users that has too many records(>500)
 bounds = (30, 500)
-N = 2  # initial 1000
+N = 10  # initial 1000
 
-userSet = generateSamplesOfActivePassengers(N)
+# userSet = generateSamplesOfActivePassengers(N)
+userSet = ['MzUwNTgyMTk5MDAzMTEwNTU5', 'MjEwNDA0MTk2ODA3MTAwNjQ4', 'NjQwMTAyMTk3ODA5MTAxNTE5',
+           'MTMwMTAzMTk4MzA1MTMwMDI2', 'MjMxMDA1MTk3NTAzMTg0MDE0', 'MzIxMDg1MTk3OTEyMjk1MDE4',
+           'MzYyMTMyMTk3MTA4MTgzODE3', 'NDIwMTA2MTk3NzAyMTQyODE3', 'MzEwMTAyMTk4MjEyMDcxNjg1',
+           'MzIwMTAzMTk3MDA4MjAxNzcz']
 # print(userSet[:10])
 # print(len(userSet))
 # userDict=loadValidUserDic()

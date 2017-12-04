@@ -405,7 +405,7 @@ rc('text', usetex=True)
 rc('lines', **{'linewidth': 2.0, 'marker': 'o', 'markersize': 0})
 
 WORK_PATH = 'plots'
-BAR_FACE_COLORS = ['white', 'darkgray', 'maroon', 'navy', 'darkolivegreen', 'dimgray']
+BAR_FACE_COLORS = ['white', 'darkgray', 'maroon', 'navy', 'dimgray','darkolivegreen',  'purple']
 PATTERNS = ['-', 'x', '/']
 
 
@@ -484,9 +484,9 @@ def plotBars(xlabel_str, ylabel_str, nlines, data, legends=None, xticks_str=None
              xtick_gap=None, ytick_gap=None, shrinkScale=None):
     x = data[0]
     N = len(data[1])
-    ind = np.arange(0, 3 * N, 3) + 0.5  # the x locations for the groups
+    ind = np.arange(0, 9 * N, 9) + 3  # the x locations for the groups
     print(ind)
-    bar_width = 3 / nlines * 0.7  # the width of the bars
+    bar_width = 9.0 / nlines * 0.7  # the width of the bars
     for i in range(1, nlines + 1):
         print(data[i])
     # print(data[2])
@@ -588,15 +588,29 @@ def plotVisitingNumOfCity():
              xticks_str, fig_name='city_num_hist.pdf', text_is_int=False)
 
 
+def predictAccuracy():
+
+    xlabel_str = 'k'
+    ylabel_str = 'Accuracy'
+    nlines = 5
+    data = [None, [0.1558,0.3076,0.4173,0.4615,0.5384],
+            [0.1533,0.2967,0.3626,0.4395,0.4835],
+            [0.1462,0.2857,0.4325,0.5054,0.6043],
+            [0.1701,0.2747,0.4395,0.5604,0.6043],
+            [0.1748,0.3267,0.4725,0.5884,0.6312]]
+    xticks_str = ['3','6','9','12','15']
+    fig_name = 'prediction_accuracy.png'
+    plotBars(xlabel_str,ylabel_str,nlines,data,legends=['GMM-2','GMM-3','fKDE','mix-KDE-Euclid','mix-KDE-Dim'],xticks_str=xticks_str,fig_name=fig_name)
+
 if __name__ == '__main__':
     # dumpSamplePassengersInfo() # have finished
     # extractFlightFactors()
-
+    predictAccuracy()
     # plotFlightFactors()
     # extractPassengerFactors()
     # plotPassengerFactors()
     # extractReservationFactors()
-    plotReservationFactors()
+    # plotReservationFactors()
     # extractFactors()
     # plotFlightFactors()
     # plotPassengerFactors()
@@ -604,3 +618,4 @@ if __name__ == '__main__':
     # findRelationAndPlot()
     # drawRelationBarBetweenBetaAndIncome()
     # plotBarPropotionBetaAndPricekpi()
+
